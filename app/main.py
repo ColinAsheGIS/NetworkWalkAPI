@@ -1,11 +1,22 @@
 from typing import List
 from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy.orm import Session
+from fastapi.middleware.cors import CORSMiddleware
 
 import crud, models, schemas
 from database import SessionLocal, engine
 
 app = FastAPI()
+
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 def get_db():
     db = SessionLocal()
@@ -28,3 +39,9 @@ async def get_vertex_by_outlet(outlet_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail=f"outletid {outlet_id} doesn't exist")
     return outlet_exists
 
+@app.get("/trace/{vertex_id}")
+async def trace_downstream(vertex_id: int, db: Session = Depends(get_db)):
+    downstream_exists = crud.get_downstream_proc(db, vertex_id)
+    if downstream_exists is None:
+        raise HTTPException(status_code=404, detail="Vertex not found")
+    return downstream_exists
